@@ -63,7 +63,7 @@ dependencies = [
 
 [[package]]
 name = "bushido_keys_rs"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "env_logger",
  "log",

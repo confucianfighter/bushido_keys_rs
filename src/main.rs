@@ -17,7 +17,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 use env_logger;
 use log::{debug, info};
-
+use quote::quote;
 mod basic_mode;
 mod conversion;
 mod input_simulator;
@@ -258,30 +258,34 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
 }
 
 fn main() {
-    println!(
-        "Starting Bushido Keys version {}\n",
-        env!("CARGO_PKG_VERSION")
-    );
+        println!("Starting Bushido Keys version {}\n", env!("CARGO_PKG_VERSION"));
+    let title = r#"
+            )              
+            (             )    (          ( /(              
+        ( )\   (     ( /((   )\ )       )\()) (  (        
+        )((_) ))\ (  )\())\ (()/( (   |((_)\ ))\ )\ ) (   
+        ((_)_ /((_))\((_)((_) ((_)))\  |_ ((_)((_|()/( )\  
+        | _ |_))(((_) |(_|_) _| |((_) | |/ (_))  )(_)|(_) 
+        | _ \ || (_-< ' \| / _` / _ \   ' </ -_)| || (_-< 
+        |___/\_,_/__/_||_|_\__,_\___/  _|\_\___| \_, /__/ 
+                                                |__/     
+    "#;
+    println!("\x1b[38;5;208m{}\x1b[0m", title);
+    
     let exe_path = env::current_exe().expect("Failed to get current executable path");
-    println!("exe_path: {:?}", exe_path);
-    // Get the parent directory (i.e., where the executable is located).
-    let exe_dir = exe_path.parent().expect("Failed to get exe directory");
-    println!("exe_dir: {:?}", exe_dir);
-    // Set the current working directory to the executable's directory.
-    env::set_current_dir(exe_dir).expect("Failed to set current working directory");
     // Initialize logger with environment variables (RUST_LOG=debug, info, warn, error)
     env_logger::init();
     // get $env:USERPROFILE
     let home_dir = env::var("USERPROFILE").expect("Failed to get home directory");
     // get home directory
     let bushido_config_dir = Path::new(&home_dir).join(".bushido_keys_config");
-    println!("config_dir: {:?}", bushido_config_dir);
+    println!("Configuration files can be found in: {:?}", bushido_config_dir);
 
     if !bushido_config_dir.exists() {
         println!("{:?} does not exist", bushido_config_dir);
         fs::create_dir(&bushido_config_dir).expect("Failed to create config directory");
         if bushido_config_dir.exists() {
-            println!("{:?} now exists", bushido_config_dir);
+            println!("Success! {:?} now exists", bushido_config_dir);
         }
     }
     // if config_dir modes.json does not exist, create it
@@ -289,14 +293,14 @@ fn main() {
     let modes_config: ModesConfig;
     let json_str: String;
     if modes_json_dir.exists() {
-        println!("modes_json_dir exists and is at {:?}", modes_json_dir);
+        println!("modes_json file exists and is at {:?}", modes_json_dir);
         // load modes_config from file
         json_str = fs::read_to_string(&modes_json_dir).expect("Failed to read modes.json");
         modes_config = serde_json::from_str(&json_str).expect("Failed to parse modes.json");
         println!("Loaded modes_config from {:?}", modes_json_dir);
-        println!("modes_config: {:?}", modes_config);
+        debug!("modes_config: {:?}", modes_config);
     } else {
-        println!("modes_json_dir does not exist, creating it");
+        println!("modes.json config file does not exist, creating it");
         // create it
         let default_modes_config: ModesConfig = serde_json::from_str(&mode_json::get_json_str())
             .expect("Failed to parse default modes config");
@@ -304,12 +308,11 @@ fn main() {
         json_str = serde_json::to_string_pretty(&default_modes_config)
             .expect("Failed to serialize default modes config");
         println!(
-            "writing to {:?} in order to initialize persistent config",
-            modes_json_dir
+            "Serializing modes to modes.json file to make sure everything matches."
         );
         fs::write(&modes_json_dir, &json_str)
             .expect("Failed to write default modes config to file");
-        println!("successfully wrote to {:?} ", modes_json_dir);
+        println!("Successfully wrote to {:?} ", modes_json_dir);
     }
     // Load available modes from configuration.
     // let config_str = fs::read_to_string("config/modes.json")
