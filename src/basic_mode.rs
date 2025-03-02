@@ -71,9 +71,7 @@ impl Mode for BasicMode {
         if let Some(mapping) = self.key_mapping.get(&vk_code) {
             info!(
                 "BasicMode: determine that we need to remap key {:#X} to {:#X} with modifiers {:?}",
-                key_state.vk_code,
-                mapping.key,
-                mapping.modifiers
+                key_state.vk_code, mapping.key, mapping.modifiers
             );
             // simulate the key tap
             simulate_key_tap(mapping.key, &mapping.modifiers);
@@ -121,7 +119,7 @@ impl Mode for BasicMode {
                     "BasicMode ({}): deactivating because activator {:#X} was released",
                     self.config.get_name(),
                     key_state.vk_code
-                );             
+                );
                 // testing my keys can I write one hundred? 100. Yes!
                 self.activated_by = None;
                 key_state.held = false;

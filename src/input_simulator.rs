@@ -134,9 +134,7 @@ pub fn get_char_from_vk_code(vk_code: u32) -> char {
     character
 }
 
-pub fn get_vk_code_from_char(c: char) -> u32 {
-    c as u32
-}
+
 
 /// Simulates a key tap with optional modifier keys.
 pub fn simulate_key_tap(vk_code: u32, modifiers: &[u32]) {
