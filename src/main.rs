@@ -258,6 +258,10 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
 }
 
 fn main() {
+    println!(
+        "Starting Bushido Keys version {}\n",
+        env!("CARGO_PKG_VERSION")
+    );
     let exe_path = env::current_exe().expect("Failed to get current executable path");
     println!("exe_path: {:?}", exe_path);
     // Get the parent directory (i.e., where the executable is located).
