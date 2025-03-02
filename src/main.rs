@@ -25,6 +25,8 @@ mod key_and_modifiers;
 mod key_state;
 mod mode;
 mod mode_config;
+mod mode_json;
+mod mouse_config_json;
 mod mouse_mode;
 mod utils;
 use basic_mode::BasicMode;
@@ -265,12 +267,49 @@ fn main() {
     env::set_current_dir(exe_dir).expect("Failed to set current working directory");
     // Initialize logger with environment variables (RUST_LOG=debug, info, warn, error)
     env_logger::init();
+    // get $env:USERPROFILE
+    let home_dir = env::var("USERPROFILE").expect("Failed to get home directory");
+    // get home directory
+    let bushido_config_dir = Path::new(&home_dir).join(".bushido_keys_config");
+    println!("config_dir: {:?}", bushido_config_dir);
 
+    if !bushido_config_dir.exists() {
+        println!("{:?} does not exist", bushido_config_dir);
+        fs::create_dir(&bushido_config_dir).expect("Failed to create config directory");
+        if bushido_config_dir.exists() {
+            println!("{:?} now exists", bushido_config_dir);
+        }
+    }
+    // if config_dir modes.json does not exist, create it
+    let modes_json_dir = bushido_config_dir.join("modes.json");
+    let modes_config: ModesConfig;
+    let json_str: String;
+    if modes_json_dir.exists() {
+        println!("modes_json_dir exists and is at {:?}", modes_json_dir);
+        // load modes_config from file
+        json_str = fs::read_to_string(&modes_json_dir).expect("Failed to read modes.json");
+        modes_config = serde_json::from_str(&json_str).expect("Failed to parse modes.json");
+        println!("Loaded modes_config from {:?}", modes_json_dir);
+        println!("modes_config: {:?}", modes_config);
+    } else {
+        println!("modes_json_dir does not exist, creating it");
+        // create it
+        let default_modes_config: ModesConfig = serde_json::from_str(&mode_json::get_json_str())
+            .expect("Failed to parse default modes config");
+        modes_config = default_modes_config.clone();
+        json_str = serde_json::to_string_pretty(&default_modes_config)
+            .expect("Failed to serialize default modes config");
+        println!(
+            "writing to {:?} in order to initialize persistent config",
+            modes_json_dir
+        );
+        fs::write(&modes_json_dir, &json_str)
+            .expect("Failed to write default modes config to file");
+        println!("successfully wrote to {:?} ", modes_json_dir);
+    }
     // Load available modes from configuration.
-    let config_str = fs::read_to_string("config/modes.json")
-        .expect("Failed to read modes.json in the working directory.");
-    let modes_config: ModesConfig =
-        serde_json::from_str(&config_str).expect("Failed to parse modes.json");
+    // let config_str = fs::read_to_string("config/modes.json")
+    //     .expect("Failed to read modes.json in the working directory.");
 
     let mut available_modes: Vec<Box<dyn Mode + Send>> = Vec::new();
     for mode_cfg in modes_config.modes {
@@ -281,7 +320,8 @@ fn main() {
         available_modes.push(Box::new(mode_instance));
     }
     info!("Loaded modes config about to add mouse mode");
-    available_modes.push(Box::new(MouseMode::new()));
+    let mouse_config_path = bushido_config_dir.join("mouse_config.json");
+    available_modes.push(Box::new(MouseMode::new(&mouse_config_path)));
     info!("Added mouse mode");
     // Store the available modes globally.
     *AVAILABLE_MODES.lock().unwrap() = available_modes;

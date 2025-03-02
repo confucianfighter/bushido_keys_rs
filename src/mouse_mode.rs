@@ -16,6 +16,9 @@ use std::time::Duration;
 // use serde for mouse config struct
 use serde::{Deserialize, Serialize};
 use std::char;
+use crate::mouse_config_json;
+use std::path::Path;
+use std::fs;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MouseConfig {
@@ -99,14 +102,14 @@ pub struct MouseMode {
 }
 
 impl MouseMode {
-    pub fn new() -> Self {
+    pub fn new(config_path: &Path) -> Self {
         let activation_keys = vec![char_to_vk(' ') as u32];
         let config = ModeConfig {
             name: "MouseMode".to_string(),
             activation_keys: vec![" ".to_string()],
             key_mapping: HashMap::new(),
         };
-        let mouse_config = load_mouse_config();
+        let mouse_config = load_mouse_config(&config_path);
         let key_mapping = config
             .key_mapping
             .iter()
@@ -145,13 +148,25 @@ impl MouseMode {
     }
 }
 
-fn load_mouse_config() -> MouseConfig {
-    let config_path = "config/mouse_config.json";
-    let config_str = std::fs::read_to_string(config_path).unwrap();
-    let config: MouseConfig = serde_json::from_str(&config_str).unwrap();
+fn load_mouse_config(path: &Path) -> MouseConfig {
+    let mut config: MouseConfig = MouseConfig::default();
+    if !path.exists() {
+        println!("mouse config file does not exist, creating it");
+        let config_str = mouse_config_json::get_json_str();
+        config = serde_json::from_str(&config_str).unwrap();
+        fs::write(path, serde_json::to_string_pretty(&config).unwrap()).unwrap();
+        println!("successfully wrote to {:?} ", path);
+        
+    }
+    else {
+        println!("mouse config file exists, loading it");
+        let config_str = fs::read_to_string(path).unwrap();
+        config = serde_json::from_str(&config_str).unwrap();
+    }
+    config
     // convert all keys in the config
 
-    config
+    
 }
 impl Mode for MouseMode {
     fn handle_key_down_event<'a, 'b>(&'a mut self, key_state: &'b mut KeyState) -> bool {

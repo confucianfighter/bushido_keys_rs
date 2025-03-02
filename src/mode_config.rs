@@ -1,21 +1,21 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct KeyMappingEntry {
     pub key: String,
     #[serde(default)]
     pub modifiers: Vec<String>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ModeConfig {
     pub name: String,
     pub activation_keys: Vec<String>,
     pub key_mapping: HashMap<String, KeyMappingEntry>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ModesConfig {
     pub modes: Vec<ModeConfig>,
 }

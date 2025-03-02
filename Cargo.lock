@@ -68,6 +68,7 @@ dependencies = [
  "env_logger",
  "log",
  "once_cell",
+ "quote",
  "serde",
  "serde_json",
  "tracelogging",
