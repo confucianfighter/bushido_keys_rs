@@ -1,8 +1,8 @@
 // space_mode.rs
+use crate::conversion::char_to_vk;
 use crate::conversion::{string_to_modifier, string_to_vk};
 use crate::input_simulator;
 use crate::input_simulator::get_char_from_vk_code;
-use crate::conversion::char_to_vk;
 use crate::key_and_modifiers::KeyAndModifiers;
 use crate::key_state::KeyState;
 use crate::mode::Mode;
@@ -14,11 +14,11 @@ use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
 // use serde for mouse config struct
+use crate::mouse_config_json;
 use serde::{Deserialize, Serialize};
 use std::char;
-use crate::mouse_config_json;
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MouseConfig {
@@ -49,7 +49,7 @@ impl Default for MouseConfig {
             //add key to jump to next monitor
             //consider adding blocked keys to avoid the user setting CTRL,C, or Z to avoid user disabling the abilityu to interrupt the program, ignore these keys in the...
             //... json config and throw a meaningful error to the user
-            // define custom char to 
+            // define custom char to
             //add mouse scroll wheel actions
             fast_up_key: 'W',
             fast_down_key: 'S',
@@ -156,17 +156,13 @@ fn load_mouse_config(path: &Path) -> MouseConfig {
         config = serde_json::from_str(&config_str).unwrap();
         fs::write(path, serde_json::to_string_pretty(&config).unwrap()).unwrap();
         println!("successfully wrote to {:?} ", path);
-        
-    }
-    else {
+    } else {
         println!("mouse config file exists, loading it");
         let config_str = fs::read_to_string(path).unwrap();
         config = serde_json::from_str(&config_str).unwrap();
     }
     config
     // convert all keys in the config
-
-    
 }
 impl Mode for MouseMode {
     fn handle_key_down_event<'a, 'b>(&'a mut self, key_state: &'b mut KeyState) -> bool {
@@ -189,7 +185,7 @@ impl Mode for MouseMode {
         let slow_left_code = char_to_vk(self.config.slow_left_key);
         let slow_down_code = char_to_vk(self.config.slow_down_key);
         let slow_right_code = char_to_vk(self.config.slow_right_key);
-        
+
         if key_state.vk_code == fast_up_code as i32 {
             self.fast_up_pressed = true;
             return true;
@@ -209,7 +205,6 @@ impl Mode for MouseMode {
             self.slow_left_pressed = true;
             return true;
         } else if key_state.vk_code == slow_down_code as i32 {
-            
             self.slow_down_pressed = true;
             return true;
         } else if key_state.vk_code == slow_right_code as i32 {
@@ -227,11 +222,11 @@ impl Mode for MouseMode {
             c if c == left_click => {
                 input_simulator::simulate_left_down();
                 true
-            },
+            }
             c if c == right_click => {
                 input_simulator::simulate_right_down();
                 true
-            },
+            }
             c if c == middle_click => {
                 input_simulator::simulate_middle_down();
                 true
@@ -252,7 +247,7 @@ impl Mode for MouseMode {
         let left_click_code = char_to_vk(self.config.left_click_key);
         let right_click_code = char_to_vk(self.config.right_click_key);
         let middle_click_code = char_to_vk(self.config.middle_click_key);
-        
+
         if key_state.vk_code == fast_up_code as i32 {
             self.fast_up_pressed = false;
             return true;
@@ -327,6 +322,21 @@ impl Mode for MouseMode {
         debug!("🐭 Updating mouse mode");
         // check all 8 directions
         let dt_seconds = delta_millis as f64 / 1000.0;
+        let mut x_dual_wield_multiplier = 1.0;
+        let mut y_dual_wield_multiplier = 1.0;
+
+        if self.slow_left_pressed && self.fast_left_pressed {
+            x_dual_wield_multiplier = self.config.dual_wield_multiplier as f64;
+        }
+        if self.slow_right_pressed && self.fast_right_pressed {
+            x_dual_wield_multiplier = self.config.dual_wield_multiplier as f64;
+        }
+        if self.slow_up_pressed && self.fast_up_pressed {
+            y_dual_wield_multiplier = self.config.dual_wield_multiplier as f64;
+        }
+        if self.slow_down_pressed && self.fast_down_pressed {
+            y_dual_wield_multiplier = self.config.dual_wield_multiplier as f64;
+        }
         if self.fast_left_pressed {
             self.mouse_vel_x -= self.config.fast_acceleration * dt_seconds;
         }
@@ -351,6 +361,9 @@ impl Mode for MouseMode {
         if self.slow_down_pressed {
             self.mouse_vel_y += self.config.slow_acceleration * dt_seconds;
         }
+        if self.slow_right_pressed && self.fast_left_pressed {
+            self.mouse_vel_x = 0.0;
+        }
 
         self.mouse_vel_x *= self.config.friction;
         self.mouse_vel_y *= self.config.friction;
@@ -366,8 +379,8 @@ impl Mode for MouseMode {
                 "🐭🐭🐭🐭🐭🐭🐭🐭🐭🐭🐭🐭🐭 Moving mouse by {} {}",
                 self.mouse_vel_x, self.mouse_vel_y
             );
-            let x_move = self.mouse_vel_x * dt_seconds as f64;
-            let y_move = self.mouse_vel_y * dt_seconds as f64;
+            let x_move = self.mouse_vel_x * dt_seconds as f64 * x_dual_wield_multiplier;
+            let y_move = self.mouse_vel_y * dt_seconds as f64 * y_dual_wield_multiplier;
             input_simulator::move_mouse(x_move as i32, y_move as i32);
         }
         // todo: use a dt for consistent speed.
