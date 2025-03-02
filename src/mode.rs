@@ -1,12 +1,8 @@
 // mode.rs
-use crate::conversion::{string_to_modifier, string_to_vk};
-use crate::input_simulator::simulate_key_tap;
 use crate::key_and_modifiers::KeyAndModifiers;
 use crate::key_state::KeyState;
 use std::collections::HashMap;
 
-use std::collections::HashSet;
-use std::sync::Mutex;
 pub trait Mode: Send {
     fn handle_key_down_event(&mut self, key_state: &mut KeyState) -> bool;
     fn handle_key_up_event(&mut self, key_state: &mut KeyState) -> bool;

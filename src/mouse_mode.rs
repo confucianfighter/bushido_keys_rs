@@ -10,7 +10,6 @@ use crate::mode_config::ModeConfig;
 use crate::utils::current_time_ms;
 use log::debug;
 use log::info;
-use windows::Win32::System::Diagnostics::Debug::CONFIG_LIST_FAILED;
 use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;

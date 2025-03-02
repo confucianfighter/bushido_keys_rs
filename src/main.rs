@@ -1,15 +1,12 @@
-use std::collections::HashMap;
 use std::fs;
 use std::mem::MaybeUninit;
-use std::ops::DerefMut;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::AtomicUsize;
 use std::sync::Mutex;
 use std::thread;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 use once_cell::sync::Lazy;
 use serde_json;
-use windows::core::PCWSTR;
 use windows::Win32::Foundation::{HINSTANCE, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -19,8 +16,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use env_logger;
-use log::{debug, error, info, warn};
-use tracelogging::Provider;
+use log::{debug, info};
 
 mod basic_mode;
 mod conversion;
@@ -34,7 +30,7 @@ mod utils;
 use basic_mode::BasicMode;
 use key_state::{KeyState, KEY_STATES};
 use mode::Mode;
-use mode_config::{ModeConfig, ModesConfig};
+use mode_config::ModesConfig;
 use mouse_mode::MouseMode;
 use utils::*;
 
@@ -149,7 +145,7 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
     //         simplify things by not forwarding the event if there is an active mode, or if it activates or deactivates a mode.
     //
     //
-    let mut state = {
+    let state = {
         let mut key_states = KEY_STATES.lock().unwrap();
         key_states
             .entry(vk_code as i32)

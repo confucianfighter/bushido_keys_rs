@@ -1,6 +1,6 @@
 // src/input_simulator.rs
 use log::info;
-use windows::{core::*, Win32::Foundation::*, Win32::UI::Input::KeyboardAndMouse::*};
+use windows::Win32::UI::Input::KeyboardAndMouse::*;
 
 pub fn move_mouse(dx: i32, dy: i32) {
     // get screen width and height
