@@ -146,7 +146,7 @@ impl MouseMode {
 }
 
 fn load_mouse_config() -> MouseConfig {
-    let config_path = "mouse_config.json";
+    let config_path = "config/mouse_config.json";
     let config_str = std::fs::read_to_string(config_path).unwrap();
     let config: MouseConfig = serde_json::from_str(&config_str).unwrap();
     // convert all keys in the config

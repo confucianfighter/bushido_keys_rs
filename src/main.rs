@@ -258,7 +258,7 @@ fn main() {
     env_logger::init();
 
     // Load available modes from configuration.
-    let config_str = fs::read_to_string("modes.json")
+    let config_str = fs::read_to_string("config/modes.json")
         .expect("Failed to read modes.json in the working directory.");
     let modes_config: ModesConfig =
         serde_json::from_str(&config_str).expect("Failed to parse modes.json");

@@ -1,10 +1,13 @@
 [package]
 name = "bushido_keys_rs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
-author = "ConfucianFighter"
 description = "ninja mouse keys."
 license = "MIT"
+
+# ... other fields ...
+include = ["src/**", "Cargo.toml", "config/**"]
+
 
 
 [dependencies]
