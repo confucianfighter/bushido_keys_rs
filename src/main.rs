@@ -32,6 +32,8 @@ use key_state::{KeyState, KEY_STATES};
 use mode::Mode;
 use mode_config::ModesConfig;
 use mouse_mode::MouseMode;
+use std::env;
+use std::path::Path;
 use utils::*;
 
 static mut HOOK_HANDLE: HHOOK = HHOOK(std::ptr::null_mut());
@@ -254,6 +256,13 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
 }
 
 fn main() {
+    let exe_path = env::current_exe().expect("Failed to get current executable path");
+    println!("exe_path: {:?}", exe_path);
+    // Get the parent directory (i.e., where the executable is located).
+    let exe_dir = exe_path.parent().expect("Failed to get exe directory");
+    println!("exe_dir: {:?}", exe_dir);
+    // Set the current working directory to the executable's directory.
+    env::set_current_dir(exe_dir).expect("Failed to set current working directory");
     // Initialize logger with environment variables (RUST_LOG=debug, info, warn, error)
     env_logger::init();
 
