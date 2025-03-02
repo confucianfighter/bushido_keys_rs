@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug bushido_keys_rs (cargo)",
+            "cargo": {
+                "args": ["build"],
+                "filter": {
+                    "name": "bushido_keys_rs",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopOnEntry": false,
+            "sourceLanguages": ["rust"]
+        }
+    ]
+}
