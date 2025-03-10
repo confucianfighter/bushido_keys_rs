@@ -130,11 +130,28 @@ pub fn simulate_middle_up() {
 }
 
 pub fn get_char_from_vk_code(vk_code: u32) -> char {
-    let character = char::from_u32(vk_code as u32).unwrap();
-    character
+    match vk_code {
+        // Modifier keys
+        0x10 | 0xA0 | 0xA1 => '⇧', // SHIFT
+        0x11 | 0xA2 | 0xA3 => '⌃', // CTRL
+        0x12 | 0xA4 | 0xA5 => '⌥', // ALT
+
+        // Special keys
+        0x08 => '⌫', // BACKSPACE
+        0x09 => '⇥', // TAB
+        0x0D => '↵', // ENTER
+        0x1B => '⎋', // ESC
+        0x20 => ' ', // SPACE
+        0x25 => '←', // LEFT ARROW
+        0x26 => '↑', // UP ARROW
+        0x27 => '→', // RIGHT ARROW
+        0x28 => '↓', // DOWN ARROW
+        0x2E => '⌦', // DELETE
+
+        // For regular keys, try to convert the virtual key code to a character
+        _ => char::from_u32(vk_code).unwrap_or('?'),
+    }
 }
-
-
 
 /// Simulates a key tap with optional modifier keys.
 pub fn simulate_key_tap(vk_code: u32, modifiers: &[u32]) {

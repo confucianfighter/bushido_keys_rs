@@ -20,6 +20,8 @@ use log::{debug, info};
 use quote::quote;
 mod basic_mode;
 mod conversion;
+mod event;
+mod hook_manager;
 mod input_simulator;
 mod key_and_modifiers;
 mod key_state;
@@ -81,14 +83,13 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
     let message = w_param.0 as u32;
     let is_key_down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
     let is_key_up = message == WM_KEYUP || message == WM_SYSKEYUP;
-    // if it's a key up, create a distinguished message with an emoticon that this is a key up event, perhaps an up arrow
-    // if it's a key down, create a distinguished message with an emoticon that this is a key down event, perhaps a down arrow
+
     if is_key_up {
-        // add emojis to the message
         info!("👆 Key up event detected");
     } else if is_key_down {
         info!("👇 Key down event detected");
     }
+
     if message != WM_KEYDOWN
         && message != WM_KEYUP
         && message != WM_SYSKEYDOWN
@@ -100,13 +101,50 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
     // Extract kb_data once safely
     let kb_data = unsafe { *(l_param.0 as *const KBDLLHOOKSTRUCT) };
     let vk_code = kb_data.vkCode;
-    // get char from vk_code
+    let is_repeat = (kb_data.flags.0 & 0x40000000) != 0;
+
+    // Create or update key state
+    let mut state = KeyState::new(vk_code as i32);
+    state.held = is_key_down;
+
+    if is_key_down {
+        state.time_pressed = current_time_ms() as u128;
+    } else {
+        state.time_released = current_time_ms() as u128;
+    }
+
+    // Get char from vk_code for logging
     let char = input_simulator::get_char_from_vk_code(vk_code);
-    info!(
-        "It was the {} key that was either pressed or released.",
-        char
-    );
-    // We know to log the key down event if it activates a mode, or if there is an active mode, and it's in the keymap.
+    let active_modifiers = key_state::get_active_modifiers();
+
+    // Log the event with modifier information
+    if !active_modifiers.is_empty() {
+        let modifier_names: Vec<String> = active_modifiers
+            .iter()
+            .map(|&m| match key_state::normalize_modifier(m) {
+                key_state::VK_SHIFT => "SHIFT".to_string(),
+                key_state::VK_CONTROL => "CTRL".to_string(),
+                key_state::VK_ALT => "ALT".to_string(),
+                _ => format!("MOD_{:X}", m),
+            })
+            .collect();
+
+        info!(
+            "{} key {} with modifiers: [{}]",
+            char,
+            if is_key_down { "pressed" } else { "released" },
+            modifier_names.join("+")
+        );
+    } else {
+        info!(
+            "{} key {}",
+            char,
+            if is_key_down { "pressed" } else { "released" }
+        );
+    }
+
+    // Get current mode (if any)
+    let mut current_mode = CURRENT_MODE.lock().unwrap().take();
 
     // Here are the possible outcomes:
     // 1. No mode is active, and the key is not in the keymap of any mode. The key is forwarded.
@@ -149,75 +187,22 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
     //         simplify things by not forwarding the event if there is an active mode, or if it activates or deactivates a mode.
     //
     //
-    let state = {
-        let mut key_states = KEY_STATES.lock().unwrap();
-        key_states
-            .entry(vk_code as i32)
-            .or_insert_with(|| {
-                std::sync::Arc::new(Mutex::new(KeyState {
-                    vk_code: vk_code as i32,
-                    name: format!("VK_{:X}", vk_code),
-                    time_pressed: current_time_ms() as u128,
-                    timeout: 200,
-                    held: is_key_down,
-                    prev_held: false,
-                    time_released: 0,
-                }))
-            })
-            .clone()
-    };
-    let mut state = state.lock().unwrap().clone();
-    // about to lock and clone the state arc.
-    state.held = is_key_down;
-    let is_repeat = state.held && state.prev_held;
-    info!("prev_held: {}", state.prev_held);
-    state.prev_held = state.held;
-    if !is_repeat && is_key_down {
-        state.time_pressed = current_time_ms() as u128;
-    }
-    // make a copy of the current mode
-    // add lock emoji to the message
-    info!("🔒 About to clone the current mode, will there be a deadlock?");
-    let mut current_mode = CURRENT_MODE.lock().unwrap().clone();
-    info!("🔓 Just cloned the current mode");
-    // here we go. Master branch, is there or is there not a mode active
     if let Some(mode) = current_mode.as_mut() {
-        info!("We are at the top of the block where there is a mode active");
         if is_repeat {
-            info!("It' repeat therefore next line of code returns LRESULT(1) because we don't wish to propogate the repeat event");
             return handle_lose_ends(Some(mode.clone()), &mut state, false);
         }
         if is_key_down && !is_repeat {
             state.time_pressed = current_time_ms() as u128;
-            info!("There's a mode active and a key is down and it's not a repeat");
             if mode.handle_key_down_event(&mut state) {
-                info!("mode handled key down event and returned true to main.");
-                // do not forward the event
                 return handle_lose_ends(Some(mode.clone()), &mut state, false);
             } else {
-                info!("mode did not handle key down event and returned false to main.");
                 return handle_lose_ends(Some(mode.clone()), &mut state, true);
             }
         } else if is_key_up {
-            let char = input_simulator::get_char_from_vk_code(vk_code);
-            // add skull emoji to the message
-            info!(
-                "💀 💀 💀  There's a mode active and a key is up, it was the {} key",
-                char
-            );
-            // check if the key matches the activation key
             if mode.check_if_deactivates(&mut state) {
-                info!("The key matches the activation key and the mode will be deactivated");
-                // set current mode to none
-                // deactivate the mode
-                // set current mode to none
-                // drop current mode to unlock it
-                // check time_pressed against now
-                // subtract with overflow
                 let elapsed_millis = current_time_ms().abs_diff(state.time_pressed);
                 info!("Elapsed time since key down: {}ms", elapsed_millis);
                 if elapsed_millis < 200 {
-                    // simulate key press of activation key
                     info!("Simulating key tap of activation key");
                     input_simulator::simulate_key_tap(vk_code, &[]);
                     return handle_lose_ends(None, &mut state, false);
@@ -233,22 +218,15 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
             }
         } else {
             info!("didn't handle the key down event, forwarding the event, this logic is questionable");
-            // forward the event
             return handle_lose_ends(Some(mode.clone()), &mut state, true);
         }
     } else {
-        // no current mode
         if is_key_down && !is_repeat {
-            //state_arc.lock().unwrap().time_pressed = current_time_ms() as u128;
-            // check if any mode is activated by this key
             for mode in AVAILABLE_MODES.lock().unwrap().iter_mut() {
                 if mode.get_activation_keys().contains(&vk_code) {
                     mode.set_activated_by(vk_code);
                     state.time_pressed = current_time_ms();
                     info!("Detected a key down, it matches an activation key. Setting current mode to {}", mode.get_name());
-
-                    // set the activated_by variable
-                    info!("Current mode set to {}", mode.get_name());
                     return handle_lose_ends(Some(mode.clone()), &mut state, false);
                 }
             }
@@ -258,7 +236,10 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
 }
 
 fn main() {
-        println!("Starting Bushido Keys version {}\n", env!("CARGO_PKG_VERSION"));
+    println!(
+        "Starting Bushido Keys version {}\n",
+        env!("CARGO_PKG_VERSION")
+    );
     let title = r#"
             )              
             (             )    (          ( /(              
@@ -271,7 +252,7 @@ fn main() {
                                                 |__/     
     "#;
     println!("\x1b[38;5;208m{}\x1b[0m", title);
-    
+
     let exe_path = env::current_exe().expect("Failed to get current executable path");
     // Initialize logger with environment variables (RUST_LOG=debug, info, warn, error)
     env_logger::init();
@@ -279,7 +260,10 @@ fn main() {
     let home_dir = env::var("USERPROFILE").expect("Failed to get home directory");
     // get home directory
     let bushido_config_dir = Path::new(&home_dir).join(".bushido_keys_config");
-    println!("Configuration files can be found in: {:?}", bushido_config_dir);
+    println!(
+        "Configuration files can be found in: {:?}",
+        bushido_config_dir
+    );
 
     if !bushido_config_dir.exists() {
         println!("{:?} does not exist", bushido_config_dir);
@@ -307,9 +291,7 @@ fn main() {
         modes_config = default_modes_config.clone();
         json_str = serde_json::to_string_pretty(&default_modes_config)
             .expect("Failed to serialize default modes config");
-        println!(
-            "Serializing modes to modes.json file to make sure everything matches."
-        );
+        println!("Serializing modes to modes.json file to make sure everything matches.");
         fs::write(&modes_json_dir, &json_str)
             .expect("Failed to write default modes config to file");
         println!("Successfully wrote to {:?} ", modes_json_dir);
