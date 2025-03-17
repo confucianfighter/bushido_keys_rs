@@ -38,6 +38,13 @@ pub struct MouseConfig {
     left_click_key: char,
     right_click_key: char,
     middle_click_key: char,
+    scroll_up_key: char,
+    scroll_down_key: char,
+    scroll_left_key: char,
+    scroll_right_key: char,
+    scroll_acceleration: f64,
+    scroll_max_speed: f64,
+    scroll_friction: f64,
     dual_wield_multiplier: f64,
     activation_keys: Vec<String>,
 }
@@ -69,9 +76,16 @@ impl Default for MouseConfig {
             left_click_key: 'Q',
             right_click_key: 'E',
             middle_click_key: 'M',
+            scroll_up_key: 'U',
+            scroll_down_key: 'I',
+            scroll_left_key: 'J',
+            scroll_right_key: 'K',
             dual_wield_multiplier: 0.5,
             //setup ability to set multiple keys as the activation keys, search for ' ' and " ", replace with code to pull activation_keys from a list
             activation_keys: vec![" ".to_string()],
+            scroll_acceleration: 100.0,
+            scroll_max_speed: 1000.0,
+            scroll_friction: 0.87,
         }
     }
 }
@@ -99,6 +113,15 @@ pub struct MouseMode {
     slow_left_pressed: bool,
     slow_down_pressed: bool,
     slow_right_pressed: bool,
+    scroll_up_pressed: bool,
+    scroll_down_pressed: bool,
+    scroll_left_pressed: bool,
+    scroll_right_pressed: bool,
+    scroll_velocity_x: f64,
+    scroll_velocity_y: f64,
+    scroll_acceleration: f64,
+    scroll_max_speed: f64,
+    scroll_friction: f64,
 }
 
 impl MouseMode {
@@ -144,6 +167,15 @@ impl MouseMode {
             slow_down_pressed: false,
             slow_right_pressed: false,
             last_update_millis: current_time_ms(),
+            scroll_up_pressed: false,
+            scroll_down_pressed: false,
+            scroll_left_pressed: false,
+            scroll_right_pressed: false,
+            scroll_velocity_x: 0.0,
+            scroll_velocity_y: 0.0,
+            scroll_acceleration: 100.0,
+            scroll_max_speed: 1000.0,
+            scroll_friction: 0.999,
         }
     }
 }
@@ -213,11 +245,28 @@ impl Mode for MouseMode {
             debug!("🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥 slow_right_down");
             return true;
         }
+        let scroll_up_code = char_to_vk(self.config.scroll_up_key);
+        let scroll_down_code = char_to_vk(self.config.scroll_down_key);
+        let scroll_left_code = char_to_vk(self.config.scroll_left_key);
+        let scroll_right_code = char_to_vk(self.config.scroll_right_key);
+        if key_state.vk_code == scroll_up_code as i32 {
+            self.scroll_up_pressed = true;
+            return true;
+        } else if key_state.vk_code == scroll_down_code as i32 {
+            self.scroll_down_pressed = true;
+            return true;
+        }
+        if key_state.vk_code == scroll_left_code as i32 {
+            self.scroll_left_pressed = true;
+            return true;
+        } else if key_state.vk_code == scroll_right_code as i32 {
+            self.scroll_right_pressed = true;
+            return true;
+        }
         let left_click = self.config.left_click_key;
         let right_click = self.config.right_click_key;
 
         let middle_click = self.config.middle_click_key;
-        let key_pressed = get_char_from_vk_code(vk_code);
         match get_char_from_vk_code(key_state.vk_code as u32) {
             c if c == left_click => {
                 input_simulator::simulate_left_down();
@@ -247,7 +296,10 @@ impl Mode for MouseMode {
         let left_click_code = char_to_vk(self.config.left_click_key);
         let right_click_code = char_to_vk(self.config.right_click_key);
         let middle_click_code = char_to_vk(self.config.middle_click_key);
-
+        let scroll_up_code = char_to_vk(self.config.scroll_up_key);
+        let scroll_down_code = char_to_vk(self.config.scroll_down_key);
+        let scroll_left_code = char_to_vk(self.config.scroll_left_key);
+        let scroll_right_code = char_to_vk(self.config.scroll_right_key);
         if key_state.vk_code == fast_up_code as i32 {
             self.fast_up_pressed = false;
             return true;
@@ -273,6 +325,20 @@ impl Mode for MouseMode {
             self.slow_right_pressed = false;
             return true;
         }
+        if key_state.vk_code == scroll_up_code as i32 {
+            self.scroll_up_pressed = false;
+            return true;
+        } else if key_state.vk_code == scroll_down_code as i32 {
+            self.scroll_down_pressed = false;
+            return true;
+        }
+        if key_state.vk_code == scroll_left_code as i32 {
+            self.scroll_left_pressed = false;
+            return true;
+        } else if key_state.vk_code == scroll_right_code as i32 {
+            self.scroll_right_pressed = false;
+            return true;
+        }
         let _left_click = self.config.left_click_key;
         let _right_click = self.config.right_click_key;
         let _middle_click = self.config.middle_click_key;
@@ -292,6 +358,7 @@ impl Mode for MouseMode {
             _ => false,
         }
     }
+
     fn update(&mut self) {
         let current_millis = current_time_ms();
         let delta_millis = current_millis.abs_diff(self.last_update_millis);
@@ -383,9 +450,63 @@ impl Mode for MouseMode {
             let y_move = self.mouse_vel_y * dt_seconds as f64 * y_dual_wield_multiplier;
             input_simulator::move_mouse(x_move as i32, y_move as i32);
         }
+        if self.scroll_up_pressed {
+            self.scroll_velocity_y += self.config.scroll_acceleration * dt_seconds;
+            // if it's less than 0 set it to 0
+            if self.scroll_velocity_y < 0.0 {
+                self.scroll_velocity_y = 0.0;
+            }
+        }
+        if self.scroll_down_pressed {
+            self.scroll_velocity_y -= self.config.scroll_acceleration * dt_seconds;
+            // if it's less than 0 set it to 0
+            if self.scroll_velocity_y > 0.0 {
+                self.scroll_velocity_y = 0.0;
+            }
+        }
+        if self.scroll_left_pressed {
+            self.scroll_velocity_x -= self.config.scroll_acceleration * dt_seconds;
+            // if it's less than 0 set it to 0
+            if self.scroll_velocity_x < 0.0 {
+                self.scroll_velocity_x = 0.0;
+            }
+        }
+        if self.scroll_right_pressed {
+            self.scroll_velocity_x += self.config.scroll_acceleration * dt_seconds;
+            // if it's less than 0 set it to 0
+            if self.scroll_velocity_x > 0.0 {
+                self.scroll_velocity_x = 0.0;
+            }
+        }
+        // clamp scroll velocity/
+        // apply friction to scroll velocity
+        self.scroll_velocity_x *= self.config.scroll_friction;
+        self.scroll_velocity_y *= self.config.scroll_friction;
+        // clamp scroll velocity between minus max and plus max
+        self.scroll_velocity_x = self
+            .scroll_velocity_x
+            .clamp(-self.scroll_max_speed, self.scroll_max_speed);
+        self.scroll_velocity_y = self
+            .scroll_velocity_y
+            .clamp(-self.scroll_max_speed, self.scroll_max_speed);
+        // set to zero if less than .2
+        if self.scroll_velocity_x.abs() < 0.02 {
+            self.scroll_velocity_x = 0.0;
+        }
+        if self.scroll_velocity_y.abs() < 0.02 {
+            self.scroll_velocity_y = 0.0;
+        }
+        if self.scroll_velocity_x.abs() >= 1.0 || self.scroll_velocity_y.abs() >= 1.0 {
+            input_simulator::simulate_scroll(
+                self.scroll_velocity_x.round() as i32,
+                self.scroll_velocity_y.round() as i32,
+            );
+        }
+
         // todo: use a dt for consistent speed.
         thread::sleep(Duration::from_millis(50));
     }
+
     fn get_name(&self) -> &str {
         "MouseMode"
     }

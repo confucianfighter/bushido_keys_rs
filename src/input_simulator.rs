@@ -20,6 +20,45 @@ pub fn move_mouse(dx: i32, dy: i32) {
         SendInput(&[input], size_of::<INPUT>() as i32);
     }
 }
+pub fn simulate_scroll(dx: i32, dy: i32) {
+    // Handle vertical scrolling
+    if dy != 0 {
+        let mouse_input = MOUSEINPUT {
+            dx: 0,
+            dy: 0,
+            mouseData: (dy) as u32, // WHEEL_DELTA is 120
+            dwFlags: MOUSEEVENTF_WHEEL,
+            time: 0,
+            dwExtraInfo: 0,
+        };
+        let input = INPUT {
+            r#type: INPUT_MOUSE,
+            Anonymous: INPUT_0 { mi: mouse_input },
+        };
+        unsafe {
+            SendInput(&[input], size_of::<INPUT>() as i32);
+        }
+    }
+
+    // Handle horizontal scrolling
+    if dx != 0 {
+        let mouse_input = MOUSEINPUT {
+            dx: 0,
+            dy: 0,
+            mouseData: (dx) as u32, // WHEEL_DELTA is 120
+            dwFlags: MOUSEEVENTF_HWHEEL,
+            time: 0,
+            dwExtraInfo: 0,
+        };
+        let input = INPUT {
+            r#type: INPUT_MOUSE,
+            Anonymous: INPUT_0 { mi: mouse_input },
+        };
+        unsafe {
+            SendInput(&[input], size_of::<INPUT>() as i32);
+        }
+    }
+}
 
 pub fn simulate_left_down() {
     let mouse_input = MOUSEINPUT {
