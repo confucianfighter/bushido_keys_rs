@@ -4,16 +4,18 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
+use std::time::{Duration, Instant};
+use lazy_static::lazy_static;
 
 #[derive(Debug, Clone)]
 pub struct KeyState {
     pub vk_code: i32,
     pub name: String,
-    pub time_pressed: u128,
+    pub time_pressed: Instant,
     pub timeout: u32,
     pub held: bool,
     pub prev_held: bool,
-    pub time_released: u128,
+    pub time_released: Instant,
 }
 
 impl Default for KeyState {
@@ -21,14 +23,15 @@ impl Default for KeyState {
         Self {
             vk_code: 0,
             name: "no name".to_string(),
-            time_pressed: 0,
+            time_pressed: Instant::now(),
             timeout: 200,
             held: false,
             prev_held: false,
-            time_released: 0,
+            time_released: Instant::now(),
         }
     }
 }
+
 
 pub type SafeKeyState = Arc<Mutex<KeyState>>;
 
@@ -69,8 +72,8 @@ impl KeyState {
     pub fn new(vk_code: i32) -> Self {
         Self {
             vk_code,
-            time_pressed: 0,
-            time_released: 0,
+            time_pressed: Instant::now(),
+            time_released: Instant::now(),
             held: false,
             name: "no name".to_string(),
             timeout: 200,

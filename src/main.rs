@@ -18,6 +18,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use env_logger;
 use log::{debug, info};
 use quote::quote;
+use std::time::Instant;
 mod basic_mode;
 mod conversion;
 mod event;
@@ -38,6 +39,7 @@ use mode_config::ModesConfig;
 use mouse_mode::MouseMode;
 use std::env;
 use std::path::Path;
+use std::sync::Arc;
 use utils::*;
 
 static mut HOOK_HANDLE: HHOOK = HHOOK(std::ptr::null_mut());
@@ -66,6 +68,7 @@ fn handle_lose_ends(
     // get the kv_code
     let kv_code = state.vk_code;
     // lock states and update or insert the state for this vk_code by cloning and wrapping in Arc<Mutex<_>>
+    state.prev_held = state.held;
     let mut states = KEY_STATES.lock().unwrap();
     states
         .entry(kv_code)
@@ -101,16 +104,22 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
     // Extract kb_data once safely
     let kb_data = unsafe { *(l_param.0 as *const KBDLLHOOKSTRUCT) };
     let vk_code = kb_data.vkCode;
-    let is_repeat = (kb_data.flags.0 & 0x40000000) != 0;
-
-    // Create or update key state
-    let mut state = KeyState::new(vk_code as i32);
+    
+    // retrieve keystates
+    let mut states = KEY_STATES.lock().unwrap().clone();
+    let mut state = states
+        .entry(vk_code as i32)
+        .or_insert_with(|| Arc::new(Mutex::new(KeyState::new(vk_code as i32))))
+        .lock()
+        .unwrap()
+        .clone();
+    
     state.held = is_key_down;
-
-    if is_key_down {
-        state.time_pressed = current_time_ms() as u128;
-    } else {
-        state.time_released = current_time_ms() as u128;
+    let is_repeat = state.prev_held && state.held;
+    if is_key_down && !is_repeat {
+        state.time_pressed = Instant::now();
+    } else if !is_key_down && !is_repeat {
+        state.time_released = Instant::now();
     }
 
     // Get char from vk_code for logging
@@ -192,7 +201,8 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
             return handle_lose_ends(Some(mode.clone()), &mut state, false);
         }
         if is_key_down && !is_repeat {
-            state.time_pressed = current_time_ms() as u128;
+            println!("Key with vk_code {:x} was pressed", vk_code);
+            state.time_pressed = Instant::now();
             if mode.handle_key_down_event(&mut state) {
                 return handle_lose_ends(Some(mode.clone()), &mut state, false);
             } else {
@@ -200,7 +210,7 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
             }
         } else if is_key_up {
             if mode.check_if_deactivates(&mut state) {
-                let elapsed_millis = current_time_ms().abs_diff(state.time_pressed);
+                let elapsed_millis = state.time_pressed.elapsed().as_millis();
                 info!("Elapsed time since key down: {}ms", elapsed_millis);
                 if elapsed_millis < 200 {
                     info!("Simulating key tap of activation key");
@@ -225,7 +235,7 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
             for mode in AVAILABLE_MODES.lock().unwrap().iter_mut() {
                 if mode.get_activation_keys().contains(&vk_code) {
                     mode.set_activated_by(vk_code);
-                    state.time_pressed = current_time_ms();
+                    state.time_pressed = Instant::now();
                     info!("Detected a key down, it matches an activation key. Setting current mode to {}", mode.get_name());
                     return handle_lose_ends(Some(mode.clone()), &mut state, false);
                 }

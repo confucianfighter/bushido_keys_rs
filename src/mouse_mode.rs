@@ -258,9 +258,11 @@ impl Mode for MouseMode {
         }
         if key_state.vk_code == scroll_left_code as i32 {
             self.scroll_left_pressed = true;
+            println!("🎡🎡🎡scroll_left_down");
             return true;
         } else if key_state.vk_code == scroll_right_code as i32 {
             self.scroll_right_pressed = true;
+            println!("🎑🎑🎑scroll_right_down");
             return true;
         }
         let left_click = self.config.left_click_key;
@@ -467,14 +469,14 @@ impl Mode for MouseMode {
         if self.scroll_left_pressed {
             self.scroll_velocity_x -= self.config.scroll_acceleration * dt_seconds;
             // if it's less than 0 set it to 0
-            if self.scroll_velocity_x < 0.0 {
+            if self.scroll_velocity_x > 0.0 {
                 self.scroll_velocity_x = 0.0;
             }
         }
         if self.scroll_right_pressed {
             self.scroll_velocity_x += self.config.scroll_acceleration * dt_seconds;
-            // if it's less than 0 set it to 0
-            if self.scroll_velocity_x > 0.0 {
+
+            if self.scroll_velocity_x < 0.0 {
                 self.scroll_velocity_x = 0.0;
             }
         }

@@ -1,6 +1,7 @@
 // conversion.rs
 pub fn string_to_vk(s: &str) -> u32 {
     let s: char = s.chars().next().unwrap().to_uppercase().next().unwrap();
+    println!("string value is {}", s);
     match s {
         'A' => 0x41,
         'S' => 0x53,
@@ -45,7 +46,7 @@ pub fn string_to_vk(s: &str) -> u32 {
         '|' => 0x5C,
         '\\' => 0x5C,
         '"' => 0x22,
-        '\'' => 0x27,
+        '\'' => 0xDE,
         '`' => 0x60,
         '~' => 0x60,
 
@@ -61,6 +62,7 @@ pub fn char_to_vk(s: char) -> u32 {
     string_to_vk(&s)
 }
 pub fn vk_to_string(vk_code: u32) -> Option<String> {
+    println!("vk_code: {}", vk_code);
     match vk_code {
         0x41 => Some("A".to_string()),
         0x42 => Some("B".to_string()),
@@ -105,7 +107,7 @@ pub fn vk_to_string(vk_code: u32) -> Option<String> {
         0xDD => Some("]".to_string()),
         0xDC => Some("\\".to_string()),
         0xBA => Some(";".to_string()),
-        0x71 => Some("'".to_string()),
+        0xDE => Some("'".to_string()),
         0x72 => Some("~".to_string()),
         0xBC => Some(",".to_string()),
         0xBE => Some(".".to_string()),
@@ -161,7 +163,7 @@ pub fn vk_to_string(vk_code: u32) -> Option<String> {
         0x19 => Some("BREAK".to_string()),
         // PRINT SCREEN
         _ => None,
-    }
+    }.inspect(|s| println!("That vk code translates to: the {:?} key.", s))
 }
 
 pub fn string_to_modifier(s: &str) -> u32 {

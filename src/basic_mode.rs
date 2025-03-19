@@ -8,6 +8,7 @@ use crate::mode_config::ModeConfig;
 use crate::utils::current_time_ms;
 use log::info;
 use std::collections::HashMap;
+use std::time::Instant;
 
 #[derive(Debug, Clone)]
 pub struct BasicMode {
@@ -91,7 +92,7 @@ impl Mode for BasicMode {
         // check if key is in key_mapping
         if let Some(_) = self.key_mapping.get(&vk_code) {
             // get the current time in milliseconds
-            key_state.time_released = current_time_ms() as u128;
+            key_state.time_released = Instant::now();
             key_state.held = false;
             return true;
         }
