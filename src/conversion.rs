@@ -1,7 +1,8 @@
 // conversion.rs
 pub fn string_to_vk(s: &str) -> u32 {
-    let s: char = s.chars().next().unwrap().to_uppercase().next().unwrap();
     println!("string value is {}", s);
+    let s: char = s.chars().next().unwrap().to_uppercase().next().unwrap();
+    println!("char value is {}", s);
     match s {
         'A' => 0x41,
         'S' => 0x53,
@@ -49,6 +50,7 @@ pub fn string_to_vk(s: &str) -> u32 {
         '\'' => 0xDE,
         '`' => 0x60,
         '~' => 0x60,
+        '|' => 0x7C,
 
         _ => s as u32,
     }
@@ -113,6 +115,7 @@ pub fn vk_to_string(vk_code: u32) -> Option<String> {
         0xBE => Some(".".to_string()),
         0xBF => Some("/".to_string()),
         0xC0 => Some("`".to_string()),
+        0x7C => Some("|".to_string()),
         // SHIFT
         0x10 | 0xA0 | 0xA1 => Some("SHIFT".to_string()),
         // CTRL

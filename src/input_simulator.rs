@@ -39,7 +39,6 @@ pub fn simulate_scroll(dx: i32, dy: i32) {
             SendInput(&[input], size_of::<INPUT>() as i32);
         }
     }
-
     // Handle horizontal scrolling
     if dx != 0 {
         let mouse_input = MOUSEINPUT {
