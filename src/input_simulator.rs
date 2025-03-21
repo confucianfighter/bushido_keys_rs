@@ -199,7 +199,7 @@ pub fn simulate_key_tap(vk_code: u32, modifiers: &[u32]) {
         "input_simulator.rs: top of simulating key tap function, main vk_code translates to: {}",
         char
     );
-    let mut inputs = Vec::new();
+  let mut inputs = Vec::new();
     // Press modifier keys
     for &mod_vk in modifiers {
         let kb = KEYBDINPUT {
