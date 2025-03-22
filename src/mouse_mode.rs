@@ -258,11 +258,9 @@ impl Mode for MouseMode {
         }
         if key_state.vk_code == scroll_left_code as i32 {
             self.scroll_left_pressed = true;
-            println!("🎡🎡🎡scroll_left_down");
             return true;
         } else if key_state.vk_code == scroll_right_code as i32 {
             self.scroll_right_pressed = true;
-            println!("🎑🎑🎑scroll_right_down");
             return true;
         }
         let left_click = self.config.left_click_key;
@@ -354,6 +352,7 @@ impl Mode for MouseMode {
                 true
             }
             c if c == _middle_click => {
+                println!("🎑🎑🎑middle_click_up");
                 input_simulator::simulate_middle_up();
                 true
             }

@@ -128,6 +128,7 @@ pub fn string_to_vk(s: &str) -> u32 {
         // Windows Keys
         "LWIN" => 0x5B,
         "RWIN" => 0x5C,
+        "WINDOWS" => 0x5B | 0x5C | 0x5D,
         "APPS" => 0x5D,
 
         // Numeric Keypad
@@ -209,6 +210,12 @@ pub fn vk_to_string(vk_code: u32) -> Option<String> {
         0x11 | 0xA2 | 0xA3 => Some("CTRL".to_string()),
         // ALT
         0x12 | 0xA4 | 0xA5 => Some("ALT".to_string()),
+        // WINDOWS
+        0x5B | 0x5C | 0x5D => Some("WINDOWS".to_string()),
+        // LWIN
+        0x5B => Some("LWIN".to_string()),
+        // RWIN
+        0x5C => Some("RWIN".to_string()),
         // TAB
         0x09 => Some("TAB".to_string()),
         // ENTER

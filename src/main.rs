@@ -201,7 +201,6 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
             return handle_lose_ends(Some(mode.clone()), &mut state, false);
         }
         if is_key_down && !is_repeat {
-            println!("Key with vk_code {:x} was pressed", vk_code);
             state.time_pressed = Instant::now();
             if mode.handle_key_down_event(&mut state) {
                 return handle_lose_ends(Some(mode.clone()), &mut state, false);
