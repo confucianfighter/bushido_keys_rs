@@ -16,6 +16,11 @@ pub trait Mode: Send {
     fn clone_box(&self) -> Box<dyn Mode + Send>;
     fn set_activated_by(&mut self, key_code: u32);
     fn get_activated_by(&self) -> Option<u32>;
+    fn get_auto_modifiers(&self) -> &Vec<u32>;
+    fn was_mode_used(&self) -> bool;
+    fn set_was_mode_used(&mut self, was_mode_used: bool);
+    fn was_repeat(&self) -> bool;
+    fn set_was_repeat(&mut self, was_repeat: bool);
 }
 
 impl Clone for Box<dyn Mode + Send> {
@@ -30,4 +35,5 @@ pub struct BasicMode {
     pub key_mapping: HashMap<u32, KeyAndModifiers>,
     pub activation_keys: Vec<u32>,
     pub key_code_activated_by: Option<u32>,
+    pub auto_modifiers: Vec<u32>,
 }

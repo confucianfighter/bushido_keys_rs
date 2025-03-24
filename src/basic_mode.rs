@@ -17,6 +17,9 @@ pub struct BasicMode {
     pub activation_keys: Vec<u32>,
     /// Tracks the virtual key that activated this mode.
     pub activated_by: Option<u32>,
+    pub auto_modifiers: Vec<u32>,
+    pub was_mode_used: bool,
+    pub was_repeat: bool,
 }
 
 impl BasicMode {
@@ -44,18 +47,42 @@ impl BasicMode {
                 )
             })
             .collect();
+        let auto_modifiers: Vec<u32> = config
+            .auto_modifiers
+            .iter()
+            .map(|s| string_to_modifier(s))
+            .collect();
 
         Self {
             config,
             key_mapping,
             activation_keys,
+            auto_modifiers: auto_modifiers,
             activated_by: None,
+            was_mode_used: false,
+            was_repeat: false,
         }
     }
 }
 
 impl Mode for BasicMode {
+    fn was_mode_used(&self) -> bool {
+        self.was_mode_used
+    }
+    fn set_was_mode_used(&mut self, was_mode_used: bool) {
+        self.was_mode_used = was_mode_used;
+    }
+    fn get_auto_modifiers(&self) -> &Vec<u32> {
+        &self.auto_modifiers
+    }
+    fn was_repeat(&self) -> bool {
+        self.was_repeat
+    }
+    fn set_was_repeat(&mut self, was_repeat: bool) {
+        self.was_repeat = was_repeat;
+    }
     fn handle_key_down_event<'a, 'b>(&'a mut self, key_state: &'b mut KeyState) -> bool {
+        println!("Mode used = {}", self.was_mode_used);
         // if the key is in the mapping or in the activation keys, then handled is true
         let mut handled = false;
         let vk_code = key_state.vk_code as u32;
@@ -69,18 +96,22 @@ impl Mode for BasicMode {
         // If this key is one of the activation keys and we haven't activated yet,
         // record it as the activator.
         // Otherwise, if the key is in our key mapping, process it.
-        if let Some(mapping) = self.key_mapping.get(&vk_code) {
-            info!(
-                "BasicMode: determine that we need to remap key {:#X} to {:#X} with modifiers {:?}",
-                key_state.vk_code, mapping.key, mapping.modifiers
-            );
-            // simulate the key tap
-            simulate_key_tap(mapping.key, &mapping.modifiers);
-        }
+        // if let Some(mapping) = self.key_mapping.get(&vk_code) {
+        //     info!(
+        //         "BasicMode: determine that we need to remap key {:#X} to {:#X} with modifiers {:?}",
+        //         key_state.vk_code, mapping.key, mapping.modifiers
+        //     );
+        //     // simulate ctrl+c if it's the c key
+
+        //     // simulate the key tap
+        //     simulate_key_tap(mapping.key, &mapping.modifiers, &self.get_auto_modifiers());
+        // }
+        handled = true;
 
         return handled;
     }
     fn handle_key_up_event<'a, 'b>(&'a mut self, key_state: &'b mut KeyState) -> bool {
+        self.set_was_mode_used(true);
         let vk_code = key_state.vk_code as u32;
         let mut handled = false;
         if self.activation_keys.contains(&vk_code) {
@@ -89,13 +120,27 @@ impl Mode for BasicMode {
         if self.key_mapping.contains_key(&vk_code) {
             handled = true;
         }
-        // check if key is in key_mapping
-        if let Some(_) = self.key_mapping.get(&vk_code) {
-            // get the current time in milliseconds
+        if let Some(mapping) = self.key_mapping.get(&vk_code) {
+            info!(
+                "BasicMode: determine that we need to remap key {:#X} to {:#X} with modifiers {:?}",
+                key_state.vk_code, mapping.key, mapping.modifiers
+            );
+            // simulate ctrl+c if it's the c key
             key_state.time_released = Instant::now();
             key_state.held = false;
-            return true;
+            handled = true;
+
+            // simulate the key tap
+            // combine the modifiers with the auto modifiers
+
+            simulate_key_tap(mapping.key, &mapping.modifiers, &self.get_auto_modifiers());
+        } else {
+            handled = true;
+            key_state.held = false;
+
+            simulate_key_tap(vk_code, &[], &self.get_auto_modifiers());
         }
+        // check if key is in key_mapping
         return handled;
     }
     fn update(&mut self) {

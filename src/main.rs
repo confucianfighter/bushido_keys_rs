@@ -33,6 +33,8 @@ mod mouse_config_json;
 mod mouse_mode;
 mod utils;
 use basic_mode::BasicMode;
+use conversion::*;
+use input_simulator::simulate_key_tap;
 use key_state::{KeyState, KEY_STATES};
 use mode::Mode;
 use mode_config::ModesConfig;
@@ -83,6 +85,8 @@ fn handle_lose_ends(
 }
 
 extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) -> LRESULT {
+    let repeat_delay: Duration = Duration::from_millis(500);
+    let repeat_interval: Duration = Duration::from_millis(100);
     let message = w_param.0 as u32;
     let is_key_down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
     let is_key_up = message == WM_KEYUP || message == WM_SYSKEYUP;
@@ -100,22 +104,26 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
     {
         return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
     }
+    // check if it's a modifier key, if so, call next hook
 
     // Extract kb_data once safely
     let kb_data = unsafe { *(l_param.0 as *const KBDLLHOOKSTRUCT) };
     let vk_code = kb_data.vkCode;
-    
+    if conversion::modifer_to_string_or_none(vk_code).is_some() {
+        return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
+    }
     // retrieve keystates
     let mut states = KEY_STATES.lock().unwrap().clone();
+    let any_key_down = states.iter().any(|(_, state)| state.lock().unwrap().held);
     let mut state = states
         .entry(vk_code as i32)
         .or_insert_with(|| Arc::new(Mutex::new(KeyState::new(vk_code as i32))))
         .lock()
         .unwrap()
         .clone();
-    
+
     state.held = is_key_down;
-    let is_repeat = state.prev_held && state.held;
+    let mut is_repeat = state.prev_held && state.held;
     if is_key_down && !is_repeat {
         state.time_pressed = Instant::now();
     } else if !is_key_down && !is_repeat {
@@ -198,6 +206,13 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
     //
     if let Some(mode) = current_mode.as_mut() {
         if is_repeat {
+            if state.time_pressed.elapsed().as_millis() > repeat_delay.as_millis()
+            // and modulo repeat_interval
+            && state.time_pressed.elapsed().as_millis() % repeat_interval.as_millis() == 0
+            {
+                mode.set_was_repeat(true);
+            }
+            is_repeat = false;
             return handle_lose_ends(Some(mode.clone()), &mut state, false);
         }
         if is_key_down && !is_repeat {
@@ -211,9 +226,9 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
             if mode.check_if_deactivates(&mut state) {
                 let elapsed_millis = state.time_pressed.elapsed().as_millis();
                 info!("Elapsed time since key down: {}ms", elapsed_millis);
-                if elapsed_millis < 200 {
+                if elapsed_millis < 200 || !mode.was_mode_used() {
                     info!("Simulating key tap of activation key");
-                    input_simulator::simulate_key_tap(vk_code, &[]);
+                    input_simulator::simulate_key_tap(vk_code, &[], &[]);
                     return handle_lose_ends(None, &mut state, false);
                 } else {
                     info!("Key was held for more than 200ms, so not simulating key tap");
@@ -230,7 +245,8 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
             return handle_lose_ends(Some(mode.clone()), &mut state, true);
         }
     } else {
-        if is_key_down && !is_repeat {
+        // check if ANY key is down
+        if is_key_down && !is_repeat && !any_key_down {
             for mode in AVAILABLE_MODES.lock().unwrap().iter_mut() {
                 if mode.get_activation_keys().contains(&vk_code) {
                     mode.set_activated_by(vk_code);
@@ -239,9 +255,11 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
                     return handle_lose_ends(Some(mode.clone()), &mut state, false);
                 }
             }
+        } else if !is_key_down && !is_repeat {
+            simulate_key_tap(vk_code, &[], &[]);
         }
     }
-    return handle_lose_ends(current_mode.clone(), &mut state, true);
+    return handle_lose_ends(current_mode.clone(), &mut state, false);
 }
 
 fn main() {

@@ -192,18 +192,22 @@ pub fn get_char_from_vk_code(vk_code: u32) -> char {
 }
 
 /// Simulates a key tap with optional modifier keys.
-pub fn simulate_key_tap(vk_code: u32, modifiers: &[u32]) {
-    // get char from vk_code
+pub fn simulate_key_tap(vk_code: u32, modifiers: &[u32], auto_modifiers: &[u32]) {
+    let modifiers: Vec<u32> = modifiers
+        .iter()
+        .chain(auto_modifiers.iter())
+        .copied()
+        .collect();
     let char = get_char_from_vk_code(vk_code);
     info!(
         "input_simulator.rs: top of simulating key tap function, main vk_code translates to: {}",
         char
     );
-  let mut inputs = Vec::new();
+    let mut inputs = Vec::new();
     // Press modifier keys
-    for &mod_vk in modifiers {
+    for mod_vk in modifiers.iter() {
         let kb = KEYBDINPUT {
-            wVk: VIRTUAL_KEY(mod_vk as u16),
+            wVk: VIRTUAL_KEY(*mod_vk as u16),
             wScan: 0,
             dwFlags: KEYBD_EVENT_FLAGS(0),
             time: 0,
@@ -239,9 +243,9 @@ pub fn simulate_key_tap(vk_code: u32, modifiers: &[u32]) {
         Anonymous: INPUT_0 { ki: kb_up },
     });
     // Release modifier keys in reverse order
-    for &mod_vk in modifiers.iter().rev() {
+    for mod_vk in modifiers.iter().rev() {
         let kb = KEYBDINPUT {
-            wVk: VIRTUAL_KEY(mod_vk as u16),
+            wVk: VIRTUAL_KEY(*mod_vk as u16),
             wScan: 0,
             dwFlags: KEYEVENTF_KEYUP,
             time: 0,

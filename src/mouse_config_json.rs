@@ -1,8 +1,7 @@
 use quote::quote;
 
 pub fn get_json_str() -> String {
-    quote! {
-    {
+    quote! {{
       "fast_up_key": "W",
       "fast_down_key": "S",
       "fast_left_key": "A",
@@ -29,8 +28,8 @@ pub fn get_json_str() -> String {
       ],
       "scroll_acceleration": 700.0,
       "scroll_friction": 0.87,
-      "scroll_max_speed": 1000.0
-    }
-    }
+      "scroll_max_speed": 1000.0,
+      "auto_modifiers": []
+    }    }
     .to_string()
 }

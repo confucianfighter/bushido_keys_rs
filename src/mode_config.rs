@@ -13,11 +13,12 @@ pub struct ModeConfig {
     pub name: String,
     pub activation_keys: Vec<String>,
     pub key_mapping: HashMap<String, KeyMappingEntry>,
+    pub auto_modifiers: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ModesConfig {
-    pub modes: Vec<ModeConfig>,
+    pub modes: Vec<ModeConfig>, 
 }
 
 impl ModeConfig {
@@ -31,5 +32,8 @@ impl ModeConfig {
 
     pub fn get_key_mapping(&self) -> &std::collections::HashMap<String, KeyMappingEntry> {
         &self.key_mapping
+    }
+    pub fn get_auto_modifiers(&self) -> &Vec<String> {
+        &self.auto_modifiers
     }
 }

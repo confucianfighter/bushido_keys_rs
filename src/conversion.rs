@@ -5,7 +5,7 @@ pub fn string_to_vk(s: &str) -> u32 {
         "A" => 0x41,
         "B" => 0x42,
         "C" => 0x43,
-"D" => 0x44,
+        "D" => 0x44,
         "E" => 0x45,
         "F" => 0x46,
         "G" => 0x47,
@@ -279,7 +279,10 @@ pub fn string_to_modifier(s: &str) -> u32 {
         "LCTRL" => 0xA2,  // VK_LCONTROL
         "RCTRL" => 0xA3,  // VK_RCONTROL
         "LALT" => 0xA4,   // VK_LALT
-        "RALT" => 0xA5,   // VK_RALT
+        "RALT" => 0xA5,
+        "LWIN" => 0x5B,
+        "RWIN" => 0x5C,
+        "WINDOWS" => 0x5B | 0x5C | 0x5D,
         _ => 0,
     }
 }
@@ -294,6 +297,9 @@ pub fn modifer_to_string_or_none(s: u32) -> Option<String> {
         0xA3 => Some("RCTRL".to_string()),
         0xA4 => Some("LALT".to_string()),
         0xA5 => Some("RALT".to_string()),
+        0x5B => Some("LWIN".to_string()),
+        0x5C => Some("RWIN".to_string()),
+        0x5D => Some("WINDOWS".to_string()),
         _ => None,
     }
 }

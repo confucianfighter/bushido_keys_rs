@@ -47,6 +47,7 @@ pub struct MouseConfig {
     scroll_friction: f64,
     dual_wield_multiplier: f64,
     activation_keys: Vec<String>,
+    auto_modifiers: Vec<String>,
 }
 // define default values for mouse config
 impl Default for MouseConfig {
@@ -86,6 +87,7 @@ impl Default for MouseConfig {
             scroll_acceleration: 100.0,
             scroll_max_speed: 1000.0,
             scroll_friction: 0.87,
+            auto_modifiers: vec![],
         }
     }
 }
@@ -122,6 +124,9 @@ pub struct MouseMode {
     scroll_acceleration: f64,
     scroll_max_speed: f64,
     scroll_friction: f64,
+    auto_modifiers: Vec<u32>,
+    was_mode_used: bool,
+    was_repeat: bool,
 }
 
 impl MouseMode {
@@ -131,6 +136,7 @@ impl MouseMode {
             name: "MouseMode".to_string(),
             activation_keys: vec![" ".to_string()],
             key_mapping: HashMap::new(),
+            auto_modifiers: vec![],
         };
         let mouse_config = load_mouse_config(&config_path);
         let key_mapping = config
@@ -176,6 +182,9 @@ impl MouseMode {
             scroll_acceleration: 100.0,
             scroll_max_speed: 1000.0,
             scroll_friction: 0.999,
+            auto_modifiers: vec![],
+            was_mode_used: false,
+            was_repeat: false,
         }
     }
 }
@@ -197,6 +206,15 @@ fn load_mouse_config(path: &Path) -> MouseConfig {
     // convert all keys in the config
 }
 impl Mode for MouseMode {
+    fn was_mode_used(&self) -> bool {
+        self.was_mode_used
+    }
+    fn set_was_mode_used(&mut self, was_mode_used: bool) {
+        self.was_mode_used = was_mode_used;
+    }
+    fn get_auto_modifiers(&self) -> &Vec<u32> {
+        &self.auto_modifiers
+    }
     fn handle_key_down_event<'a, 'b>(&'a mut self, key_state: &'b mut KeyState) -> bool {
         let vk_code = key_state.vk_code as u32;
         // If this key is an activation key and not already activated, record it.
@@ -284,7 +302,14 @@ impl Mode for MouseMode {
             _ => false,
         }
     }
+    fn was_repeat(&self) -> bool {
+        self.was_repeat
+    }
+    fn set_was_repeat(&mut self, was_repeat: bool) {
+        self.was_repeat = was_repeat.clone();
+    }
     fn handle_key_up_event<'a, 'b>(&'a mut self, key_state: &'b mut KeyState) -> bool {
+        self.set_was_mode_used(true);
         let fast_up_code = char_to_vk(self.config.fast_up_key);
         let fast_left_code = char_to_vk(self.config.fast_left_key);
         let fast_down_code = char_to_vk(self.config.fast_down_key);
