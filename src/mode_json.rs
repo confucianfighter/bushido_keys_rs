@@ -9,9 +9,7 @@ pub fn get_json_str() -> String {
             "A",
             ";"
           ],
-          "auto_modifiers": [
-
-          ],
+          "auto_modifiers": [],
           "key_mapping": {
             "D": {
               "key": "3",
@@ -61,9 +59,7 @@ pub fn get_json_str() -> String {
             "S",
             "L"
           ],
-          "auto_modifiers": [
-
-          ],
+          "auto_modifiers": [],
           "key_mapping": {
             "H": {
               "key": "6",
@@ -164,10 +160,8 @@ pub fn get_json_str() -> String {
               "modifiers": []
             },
             "R": {
-              "key": "BACKSPACE",
-              "modifiers": [
-                "SHIFT"
-              ]
+              "key": "DELETE",
+              "modifiers": []
             }
           }
         },
@@ -177,9 +171,7 @@ pub fn get_json_str() -> String {
             "D",
             "K"
           ],
-          "auto_modifiers": [
-
-          ],
+          "auto_modifiers": [],
           "key_mapping": {
             "H": {
               "key": "|",
@@ -245,22 +237,25 @@ pub fn get_json_str() -> String {
             "F",
             "J"
           ],
-          "auto_modifiers": [
-
-          ],
+          "auto_modifiers": [],
           "key_mapping": {
-
             "C": {
               "key": "C",
-              "modifiers": ["CTRL"]
+              "modifiers": [
+                "CTRL"
+              ]
             },
             "V": {
               "key": "V",
-              "modifiers": ["RWIN"]
+              "modifiers": [
+                "RWIN"
+              ]
             },
             "P": {
               "key": "P",
-              "modifiers": ["CTRL"]
+              "modifiers": [
+                "CTRL"
+              ]
             },
             "K": {
               "key": "LEFT",
@@ -297,7 +292,6 @@ pub fn get_json_str() -> String {
             "R": {
               "key": "PAGEUP",
               "modifiers": []
-
             },
             "F": {
               "key": "PAGEDOWN",
@@ -335,9 +329,7 @@ pub fn get_json_str() -> String {
             "G",
             "H"
           ],
-          "auto_modifiers": [
-
-          ],
+          "auto_modifiers": [],
           "key_mapping": {
             "A": {
               "key": "F1",
@@ -393,7 +385,6 @@ pub fn get_json_str() -> String {
             }
           }
         },
-
         {
           "name": "CTRL",
           "activation_keys": [
@@ -403,11 +394,9 @@ pub fn get_json_str() -> String {
           "auto_modifiers": [
             "CTRL"
           ],
-          "key_mapping": {
-
-          }
+          "key_mapping": {}
         }
       ]
-    }    }
+    } }
     .to_string()
 }

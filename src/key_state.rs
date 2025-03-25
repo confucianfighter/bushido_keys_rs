@@ -1,3 +1,4 @@
+use lazy_static::lazy_static;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::{
@@ -5,7 +6,6 @@ use std::sync::{
     Arc, Mutex,
 };
 use std::time::{Duration, Instant};
-use lazy_static::lazy_static;
 
 #[derive(Debug, Clone)]
 pub struct KeyState {
@@ -16,6 +16,8 @@ pub struct KeyState {
     pub held: bool,
     pub prev_held: bool,
     pub time_released: Instant,
+    pub was_double_tap: bool,
+    pub was_shift_held_on_key_down: bool,
 }
 
 impl Default for KeyState {
@@ -28,10 +30,11 @@ impl Default for KeyState {
             held: false,
             prev_held: false,
             time_released: Instant::now(),
+            was_double_tap: false,
+            was_shift_held_on_key_down: false,
         }
     }
 }
-
 
 pub type SafeKeyState = Arc<Mutex<KeyState>>;
 
@@ -78,6 +81,8 @@ impl KeyState {
             name: "no name".to_string(),
             timeout: 200,
             prev_held: false,
+            was_double_tap: false,
+            was_shift_held_on_key_down: false,
         }
     }
 

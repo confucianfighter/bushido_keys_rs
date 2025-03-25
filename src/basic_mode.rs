@@ -132,13 +132,24 @@ impl Mode for BasicMode {
 
             // simulate the key tap
             // combine the modifiers with the auto modifiers
+            let modifiers = [
+                &mapping.modifiers.clone().into_iter().collect::<Vec<u32>>()[..],
+                //if key_state.was_shift_held_on_key_down {
+                if key_state.was_shift_held_on_key_down {
+                    &[0x10]
+                } else {
+                    &[]
+                }, //} else {
+                   //    &[]
+            ]
+            .concat();
 
-            simulate_key_tap(mapping.key, &mapping.modifiers, &self.get_auto_modifiers());
+            simulate_key_tap(mapping.key, &modifiers, &self.get_auto_modifiers());
         } else {
             handled = true;
             key_state.held = false;
 
-            simulate_key_tap(vk_code, &[], &self.get_auto_modifiers());
+            simulate_key_tap(vk_code, &[0x10], &self.get_auto_modifiers());
         }
         // check if key is in key_mapping
         return handled;

@@ -35,6 +35,7 @@ mod utils;
 use basic_mode::BasicMode;
 use conversion::*;
 use input_simulator::simulate_key_tap;
+use key_state::VK_SHIFT;
 use key_state::{KeyState, KEY_STATES};
 use mode::Mode;
 use mode_config::ModesConfig;
@@ -104,15 +105,19 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
     {
         return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
     }
-    // check if it's a modifier key, if so, call next hook
 
     // Extract kb_data once safely
     let kb_data = unsafe { *(l_param.0 as *const KBDLLHOOKSTRUCT) };
-    let vk_code = kb_data.vkCode;
-    if conversion::modifer_to_string_or_none(vk_code).is_some() {
-        return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
+    let mut vk_code = kb_data.vkCode;
+    // check if it's a modifier key, if so, call next hook
+    if vk_code == 0x10 || vk_code == 0xA0 || vk_code == 0xA1 {
+        vk_code = 0x10;
     }
-    // retrieve keystates
+    if let Some(modifier) = conversion::modifer_to_string_or_none(vk_code) {
+        if vk_code != 0x10 {
+            return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
+        }
+    } // retrieve keystates
     let mut states = KEY_STATES.lock().unwrap().clone();
     let any_key_down = states.iter().any(|(_, state)| state.lock().unwrap().held);
     let mut state = states
@@ -123,10 +128,31 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
         .clone();
 
     state.held = is_key_down;
-    let mut is_repeat = state.prev_held && state.held;
-    if is_key_down && !is_repeat {
+
+    let mut is_system_repeat = state.prev_held && state.held;
+    if is_key_down && !is_system_repeat {
+        println!("Key down event detected");
+        if vk_code == 0x10 || vk_code == 0xA0 || vk_code == 0xA1 {
+            println!("shift key down event detected");
+        }
         state.time_pressed = Instant::now();
-    } else if !is_key_down && !is_repeat {
+        // see if state of shift key is 'held'
+        match states.get(&0x10) {
+            Some(shift_state) => {
+                println!("Shift state: {:?}", shift_state.lock().unwrap().held);
+                if shift_state.lock().unwrap().held {
+                    if vk_code != 0x10 {
+                        state.was_shift_held_on_key_down = true;
+                    }
+                } else {
+                    state.was_shift_held_on_key_down = false;
+                }
+            }
+            None => {
+                debug!("Shift is not pressed.");
+            }
+        }
+    } else if !is_key_down && !is_system_repeat {
         state.time_released = Instant::now();
     }
 
@@ -186,7 +212,7 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
     // Conditions:
     // Forward immediately if it's not a key up or key down event.
     // In all cases of a key up or key down event, update the key state.
-    // Key Up:
+    // Key Up
     //      Update the key state with prev state and current state.
     //      If the key matches the activation key, and the mode is active,
     //         Deactivate the mode.
@@ -205,17 +231,17 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
     //
     //
     if let Some(mode) = current_mode.as_mut() {
-        if is_repeat {
+        if is_system_repeat {
             if state.time_pressed.elapsed().as_millis() > repeat_delay.as_millis()
             // and modulo repeat_interval
             && state.time_pressed.elapsed().as_millis() % repeat_interval.as_millis() == 0
             {
                 mode.set_was_repeat(true);
             }
-            is_repeat = false;
+            is_system_repeat = false;
             return handle_lose_ends(Some(mode.clone()), &mut state, false);
         }
-        if is_key_down && !is_repeat {
+        if is_key_down && !is_system_repeat {
             state.time_pressed = Instant::now();
             if mode.handle_key_down_event(&mut state) {
                 return handle_lose_ends(Some(mode.clone()), &mut state, false);
@@ -246,7 +272,7 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
         }
     } else {
         // check if ANY key is down
-        if is_key_down && !is_repeat && !any_key_down {
+        if is_key_down && !is_system_repeat && !any_key_down {
             for mode in AVAILABLE_MODES.lock().unwrap().iter_mut() {
                 if mode.get_activation_keys().contains(&vk_code) {
                     mode.set_activated_by(vk_code);
@@ -255,8 +281,13 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
                     return handle_lose_ends(Some(mode.clone()), &mut state, false);
                 }
             }
-        } else if !is_key_down && !is_repeat {
-            simulate_key_tap(vk_code, &[], &[]);
+        } else if !is_key_down && !is_system_repeat {
+            let mut modifiers = Vec::new();
+            if state.was_shift_held_on_key_down {
+                println!("Shift was held down when the key was released");
+                modifiers.push(0x10);
+            }
+            simulate_key_tap(vk_code, &modifiers, &[]);
         }
     }
     return handle_lose_ends(current_mode.clone(), &mut state, false);
