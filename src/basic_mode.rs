@@ -82,8 +82,8 @@ impl Mode for BasicMode {
         self.was_repeat = was_repeat;
     }
     fn handle_key_down_event<'a, 'b>(&'a mut self, key_state: &'b mut KeyState) -> bool {
-        println!("Mode used = {}", self.was_mode_used);
-        // if the key is in the mapping or in the activation keys, then handled is true
+        //println!("Mode used = {}", self.was_mode_used);
+        // if the key is in the mapping or in the activation keys, then  true
         let mut handled = false;
         let vk_code = key_state.vk_code as u32;
         if self.activation_keys.contains(&vk_code) {
