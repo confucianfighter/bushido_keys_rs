@@ -397,6 +397,6 @@ pub fn get_json_str() -> String {
           "key_mapping": {}
         }
       ]
-    } }
+    }}
     .to_string()
 }
