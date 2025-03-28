@@ -105,13 +105,23 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
     {
         return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
     }
-
+    // if it's a backspace or arrows, return immediately
     // Extract kb_data once safely
     let kb_data = unsafe { *(l_param.0 as *const KBDLLHOOKSTRUCT) };
     let mut vk_code = kb_data.vkCode;
     // check if it's a modifier key, if so, call next hook
     if vk_code == 0x10 || vk_code == 0xA0 || vk_code == 0xA1 {
         vk_code = 0x10;
+    }
+    // if it's a backspace or arrows, return immediately
+    if vk_code == 0x08
+        || vk_code == 0x25
+        || vk_code == 0x26
+        || vk_code == 0x28
+        || vk_code == 0x27
+        || vk_code == 0x10
+    {
+        return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
     }
     if let Some(modifier) = conversion::modifer_to_string_or_none(vk_code) {
         if vk_code != 0x10 {
@@ -131,15 +141,15 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
 
     let mut is_system_repeat = state.prev_held && state.held;
     if is_key_down && !is_system_repeat {
-        println!("Key down event detected");
+        //printl("Key down event detected");
         if vk_code == 0x10 || vk_code == 0xA0 || vk_code == 0xA1 {
-            println!("shift key down event detected");
+            //printl("shift key down event detected");
         }
         state.time_pressed = Instant::now();
         // see if state of shift key is 'held'
         match states.get(&0x10) {
             Some(shift_state) => {
-                println!("Shift state: {:?}", shift_state.lock().unwrap().held);
+                //printl("Shift state: {:?}", shift_state.lock().unwrap().held);
                 if shift_state.lock().unwrap().held {
                     if vk_code != 0x10 {
                         state.was_shift_held_on_key_down = true;
@@ -284,7 +294,7 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
         } else if !is_key_down && !is_system_repeat {
             let mut modifiers = Vec::new();
             if state.was_shift_held_on_key_down {
-                println!("Shift was held down when the key was released");
+                ////printl("Shift was held down when the key was released");
                 modifiers.push(0x10);
             }
             simulate_key_tap(vk_code, &modifiers, &[]);
