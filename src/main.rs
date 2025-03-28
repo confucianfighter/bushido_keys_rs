@@ -21,8 +21,6 @@ use quote::quote;
 use std::time::Instant;
 mod basic_mode;
 mod conversion;
-mod event;
-mod hook_manager;
 mod input_simulator;
 mod key_and_modifiers;
 mod key_state;
