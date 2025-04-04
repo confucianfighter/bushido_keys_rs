@@ -8,7 +8,7 @@ use crate::mode_config::ModeConfig;
 use crate::utils::current_time_ms;
 use log::info;
 use std::collections::HashMap;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone)]
 pub struct BasicMode {
@@ -143,13 +143,26 @@ impl Mode for BasicMode {
                    //    &[]
             ]
             .concat();
-
-            simulate_key_tap(mapping.key, &modifiers, &self.get_auto_modifiers());
+            // if the key was held for more than 500ms, do not simulate the key tap
+            if key_state.time_pressed.elapsed().as_millis() < Duration::from_millis(500).as_millis()
+            {
+                simulate_key_tap(mapping.key, &modifiers, &self.get_auto_modifiers());
+            }
         } else {
-            handled = true;
-            key_state.held = false;
+            // Calculate modifiers directly into a Vec
+            let mut modifiers = Vec::new();
+            if key_state.was_shift_held_on_key_down {
+                modifiers.push(0x10);
+            }
 
-            simulate_key_tap(vk_code, &[0x10], &self.get_auto_modifiers());
+            handled = true;
+            // key_state.held = false; // Let main.rs handle state update
+
+            // Pass a slice reference (&modifiers) to simulate_key_tap
+            if key_state.time_pressed.elapsed().as_millis() < Duration::from_millis(500).as_millis()
+            {
+                simulate_key_tap(vk_code, &modifiers, &self.get_auto_modifiers());
+            }
         }
         // check if key is in key_mapping
         return handled;

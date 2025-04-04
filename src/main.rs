@@ -112,13 +112,7 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
         vk_code = 0x10;
     }
     // if it's a backspace or arrows, return immediately
-    if vk_code == 0x08
-        || vk_code == 0x25
-        || vk_code == 0x26
-        || vk_code == 0x28
-        || vk_code == 0x27
-        || vk_code == 0x10
-    {
+    if vk_code == 0x08 || vk_code == 0x25 || vk_code == 0x26 || vk_code == 0x28 || vk_code == 0x27 {
         return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
     }
     if let Some(modifier) = conversion::modifer_to_string_or_none(vk_code) {
@@ -260,7 +254,7 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
             if mode.check_if_deactivates(&mut state) {
                 let elapsed_millis = state.time_pressed.elapsed().as_millis();
                 info!("Elapsed time since key down: {}ms", elapsed_millis);
-                if elapsed_millis < 200 || !mode.was_mode_used() {
+                if elapsed_millis < 200 && !mode.was_mode_used() {
                     info!("Simulating key tap of activation key");
                     input_simulator::simulate_key_tap(vk_code, &[], &[]);
                     return handle_lose_ends(None, &mut state, false);
